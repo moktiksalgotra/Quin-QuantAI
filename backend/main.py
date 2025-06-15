@@ -18,7 +18,7 @@ backend_dir = str(Path(__file__).parent)
 if backend_dir not in sys.path:
     sys.path.append(backend_dir)
 
-from db.models import get_engine, init_db
+from db.models import get_engine, init_db, Base
 from db.dynamic_models import DynamicTableManager
 from llm.query_generator import QueryGenerator
 from dotenv import load_dotenv
