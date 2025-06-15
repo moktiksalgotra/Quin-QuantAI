@@ -23,7 +23,13 @@ from db.dynamic_models import DynamicTableManager
 from llm.query_generator import QueryGenerator
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
+
+# Debug: Print environment variables
+print("Environment Variables:")
+print(f"GROQ_API_KEY exists: {'GROQ_API_KEY' in os.environ}")
+print(f"GROQ_API_KEY length: {len(os.getenv('GROQ_API_KEY', ''))}")
 
 app = FastAPI(title="AI Data Analytics Chatbot")
 
