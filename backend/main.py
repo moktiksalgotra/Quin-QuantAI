@@ -61,13 +61,11 @@ class DatasetInfo(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     try:
-        # Initialize database first
+        # Initialize database
         Base.metadata.create_all(engine)
-        # Then reset database
-        table_manager.reset_database()
-        logger.info("Database reset on startup")
+        logger.info("Database initialized on startup")
     except Exception as e:
-        logger.error(f"Error resetting database on startup: {str(e)}")
+        logger.error(f"Error initializing database on startup: {str(e)}")
 
 @app.post("/api/upload", response_model=DatasetInfo)
 async def upload_dataset(
