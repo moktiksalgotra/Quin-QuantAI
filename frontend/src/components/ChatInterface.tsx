@@ -1,15 +1,9 @@
 import { useState, useRef, useEffect, ReactElement } from 'react';
 import { sendMessage } from '../services/api';
-import type { Message, ChatResponse } from '../types/chat';
-import VisualizationPanel from './VisualizationPanel';
+import type { Message,} from '../types/chat';
 
-const chartTypes = [
-  { type: 'bar', label: 'Bar' },
-  { type: 'line', label: 'Line' },
-  { type: 'pie', label: 'Pie' },
-  { type: 'scatter', label: 'Scatter' },
-  { type: 'table', label: 'Table' },
-];
+
+
 
 // Helper function to format different data types
 const formatValue = (value: any, columnName: string): string => {
@@ -74,7 +68,7 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [, setIsInputFocused] = useState(false);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -333,12 +327,7 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
     );
   };
 
-  // Add clear chat handler
-  const handleClearChat = () => {
-    setMessages([]);
-    setInput('');
-    onMessagesChange(false);
-  };
+  
 
   // Add back button handler
   const handleBackToHome = () => {
@@ -493,15 +482,4 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
     </div>
   );
 }
-
-// Add these styles to your index.css or equivalent
-const styles = `
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out forwards;
-}
-`; 
+ 

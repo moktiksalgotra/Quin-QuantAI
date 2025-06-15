@@ -98,7 +98,7 @@ styleSheet.innerText = styles;
 document.head.appendChild(styleSheet);
 
 // Greeting Bar Component
-function GreetingBar({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function GreetingBar({ visible,}: { visible: boolean; onClose: () => void }) {
   return (
     <div 
       className={`fixed top-8 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-500 ease-in-out ${
@@ -159,7 +159,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
   const [hasMessages, setHasMessages] = useState(false);
-  const [greetingIndex, setGreetingIndex] = useState(0);
+  const [, setGreetingIndex] = useState(0);
   const [userInputted, setUserInputted] = useState(false);
   const [showDatasetInfo, setShowDatasetInfo] = useState(false);
   const [showVisualization, setShowVisualization] = useState(false);
@@ -174,14 +174,7 @@ function App() {
     "Looking for data insights?",
   ];
 
-  // Floating particles animation
-  const particles = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 4 + 1,
-    speed: Math.random() * 2 + 1,
-  }));
+  
 
   useEffect(() => {
   const loadDataset = async () => {
