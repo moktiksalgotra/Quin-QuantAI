@@ -30,15 +30,15 @@ app = FastAPI(title="AI Data Analytics Chatbot")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Frontend URL
+    allow_origins=["*"],  # Allow all origins in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Initialize database and managers
-engine = init_db(os.getenv("DATABASE_URL"))
-table_manager = DynamicTableManager(os.getenv("DATABASE_URL"))
+engine = init_db(os.getenv("DATABASE_URL", "sqlite:///./data.db"))
+table_manager = DynamicTableManager(os.getenv("DATABASE_URL", "sqlite:///./data.db"))
 query_generator = QueryGenerator()
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,14 @@ async def startup_event():
         logger.info("Database initialized on startup")
     except Exception as e:
         logger.error(f"Error initializing database on startup: {str(e)}")
+
+@app.get("/")
+async def root():
+    return {
+        "status": "healthy",
+        "message": "Quin-QuantAI API is running",
+        "version": "1.0.0"
+    }
 
 @app.post("/api/upload", response_model=DatasetInfo)
 async def upload_dataset(
@@ -237,10 +245,15 @@ async def reset_database():
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    
+    # Get port from environment variable or default to 8000
+    port = int(os.getenv("PORT", 8000))
+    
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=8000,
+        port=port,
         reload_dirs=["backend"],  # Only watch the backend directory
         reload_excludes=["**/node_modules/**"]  # Exclude node_modules
     ) 
