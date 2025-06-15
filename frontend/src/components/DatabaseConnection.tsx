@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+
 interface DatabaseConnectionProps {
   onConnectionSuccess: () => void;
 }
@@ -32,7 +34,7 @@ const DatabaseConnection: React.FC<DatabaseConnectionProps> = ({ onConnectionSuc
     setError(null);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/db/connect', formData);
+      const response = await axios.post(`${API_BASE_URL}/db/connect`, formData);
       if (response.data.status === 'success') {
         onConnectionSuccess();
         await fetchTables();
@@ -46,7 +48,7 @@ const DatabaseConnection: React.FC<DatabaseConnectionProps> = ({ onConnectionSuc
 
   const fetchTables = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/db/tables');
+      const response = await axios.get(`${API_BASE_URL}/db/tables`);
       setTables(response.data.tables);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to fetch tables');
@@ -57,8 +59,8 @@ const DatabaseConnection: React.FC<DatabaseConnectionProps> = ({ onConnectionSuc
     setSelectedTable(tableName);
     try {
       const [schemaResponse, previewResponse] = await Promise.all([
-        axios.get(`http://localhost:8000/api/db/table/${tableName}/schema`),
-        axios.get(`http://localhost:8000/api/db/table/${tableName}/preview`)
+        axios.get(`${API_BASE_URL}/db/table/${tableName}/schema`),
+        axios.get(`${API_BASE_URL}/db/table/${tableName}/preview`)
       ]);
       setTableSchema(schemaResponse.data.schema);
       setTablePreview(previewResponse.data.data);
