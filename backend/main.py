@@ -75,6 +75,12 @@ async def root():
         "version": "1.0.0"
     }
 
+@app.post("/upload", response_model=DatasetInfo)
+async def upload_dataset_direct(
+    file: UploadFile = File(...)
+):
+    return await upload_dataset(file)
+
 @app.post("/api/upload", response_model=DatasetInfo)
 async def upload_dataset(
     file: UploadFile = File(...)
