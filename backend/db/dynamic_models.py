@@ -31,9 +31,13 @@ class DynamicTableManager:
                     conn.execute(text(f'DROP TABLE IF EXISTS "{table}"'))
             conn.commit()
             
-            # Reset SQLite sequence
-            conn.execute(text("DELETE FROM sqlite_sequence"))
-            conn.commit()
+            # Reset SQLite sequence if it exists
+            try:
+                conn.execute(text("DELETE FROM sqlite_sequence"))
+                conn.commit()
+            except Exception as e:
+                # Ignore error if sqlite_sequence doesn't exist
+                pass
         
         # Refresh metadata
         self.metadata.clear()

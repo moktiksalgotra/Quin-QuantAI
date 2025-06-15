@@ -69,9 +69,18 @@ async def startup_event():
     try:
         # Initialize database
         Base.metadata.create_all(engine)
+        # Create initial tables if they don't exist
+        with engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS current_dataset (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT
+                )
+            """))
+            conn.commit()
         logger.info("Database initialized on startup")
     except Exception as e:
         logger.error(f"Error initializing database on startup: {str(e)}")
+        raise
 
 @app.get("/")
 async def root():
