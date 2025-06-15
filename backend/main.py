@@ -1,7 +1,5 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import pandas as pd
@@ -38,11 +36,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-os.makedirs(static_dir, exist_ok=True)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
 # Initialize database and managers
 engine = init_db(os.getenv("DATABASE_URL"))
 table_manager = DynamicTableManager(os.getenv("DATABASE_URL"))
@@ -68,15 +61,13 @@ class DatasetInfo(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     try:
-        # Reset database on startup
+        # Initialize database first
+        Base.metadata.create_all(engine)
+        # Then reset database
         table_manager.reset_database()
         logger.info("Database reset on startup")
     except Exception as e:
         logger.error(f"Error resetting database on startup: {str(e)}")
-
-@app.get("/")
-async def root():
-    return FileResponse(os.path.join(static_dir, "index.html"))
 
 @app.post("/api/upload", response_model=DatasetInfo)
 async def upload_dataset(
