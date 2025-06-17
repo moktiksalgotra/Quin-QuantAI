@@ -87,7 +87,7 @@ async def startup_event():
 async def root():
     return {
         "status": "healthy",
-        "message": "Quin-QuantAI API is running",
+        "message": "SEE-Q-QuantAI API is running",
         "version": "1.0.0"
     }
 
@@ -104,7 +104,11 @@ async def upload_dataset(
     try:
         # Read file based on extension
         if file.filename.endswith('.csv'):
-            df = pd.read_csv(file.file)
+            try:
+                df = pd.read_csv(file.file)
+            except UnicodeDecodeError:
+                file.file.seek(0)
+                df = pd.read_csv(file.file, encoding='latin1')
         elif file.filename.endswith(('.xls', '.xlsx')):
             df = pd.read_excel(file.file)
         else:
@@ -170,7 +174,7 @@ async def chat(message: ChatMessage):
         if message.message.lower() in ['hi', 'hello', 'hey', 'greetings']:
             return ChatResponse(
                 query="SELECT 'greeting' as type",
-                explanation="Hello! I'm Quin - Intelligent Analytics Assistant. I can help you analyze your data. Please upload a dataset to get started.",
+                explanation="Hello! I'm SEE-Q - Intelligent Analytics Assistant. I can help you analyze your data.",
                 summary="Greeting message",
                 data=[],
                 type="greeting"

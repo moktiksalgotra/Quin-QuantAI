@@ -465,7 +465,7 @@ If the user's question is not related to data analysis, politely explain that yo
 
     def get_greeting_response(self, message: str) -> str:
         """Get appropriate greeting response (always the same for any greeting/small talk)."""
-        return "Hi there! I'm Quin - Intelligent Analytics Assistant. I can help you understand your data. What would you like to know?"
+        return "Hi there! I'm SEE-Q - Intelligent Analytics Assistant. I can help you understand your data. What would you like to know?"
 
     def get_help_response(self, message: str) -> str:
         """Get appropriate help response."""
