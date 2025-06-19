@@ -59,4 +59,7 @@ var/
 
 # Local development
 .vercel
-.next 
+.next
+
+# Ignore SQLite and other database files
+*.db 
