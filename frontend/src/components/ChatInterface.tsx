@@ -295,9 +295,15 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
             <svg className="w-8 h-8 text-red-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
             <div>
               <h3 className="text-lg font-bold text-red-200 mb-2">No Dataset Available</h3>
-              <div className="text-red-100 text-base leading-relaxed">
+              <div className="text-red-100 text-base leading-relaxed mb-4">
                 {message.explanation || 'Please upload a dataset first, and then I\'ll be happy to help you analyze it!'}
               </div>
+              <button
+                onClick={onUploadClick}
+                className="mt-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg shadow hover:from-pink-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 transition"
+              >
+                Upload Dataset
+              </button>
             </div>
           </div>
         </div>
