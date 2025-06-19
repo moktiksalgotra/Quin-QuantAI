@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Dict, Any, List, Union, Optional
-from langchain.chat_models import ChatGroq
+from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 import os
 from dotenv import load_dotenv
@@ -17,7 +17,7 @@ class DataProcessor:
     def __init__(self):
         self.llm = ChatGroq(
             api_key=os.getenv("GROQ_API_KEY"),
-            model_name="mixtral-8x7b-32768"
+            model_name="llama-3.1-8b-instant"
         )
     
     def get_summary(self, df: pd.DataFrame) -> Dict[str, Any]:
@@ -37,7 +37,15 @@ class DataProcessor:
     
     def generate_insights(self, df: pd.DataFrame, query: Optional[str] = None) -> str:
         """Generate insights using LLM"""
-        summary = self.get_summary(df)
+        # Only send a compact summary to the LLM
+        compact_summary = {
+            "shape": df.shape,
+            "columns": df.columns.tolist(),
+            "dtypes": df.dtypes.astype(str).to_dict(),
+            "missing_values": df.isnull().sum().to_dict(),
+            "numeric_summary": df.describe().to_dict() if not df.empty else {},
+            "sample_rows": df.head(5).to_dict(orient="records") if not df.empty else []
+        }
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are a data analyst. Analyze the following data summary and provide key insights."),
@@ -54,7 +62,7 @@ class DataProcessor:
         
         chain = prompt | self.llm
         response = chain.invoke({
-            "summary": str(summary),
+            "summary": str(compact_summary),
             "query": query or "No specific query provided"
         })
         

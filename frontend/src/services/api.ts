@@ -11,10 +11,15 @@ const api = axios.create({
   },
 });
 
-export const sendMessage = async (message: string): Promise<ChatResponse> => {
+export const sendMessage = async (payload: { message: string; history?: any[] } | string): Promise<ChatResponse> => {
   try {
-    const response = await api.post<ChatResponse>('/chat', { message });
-    return response.data;
+    if (typeof payload === 'string') {
+      const response = await api.post<ChatResponse>('/chat', { message: payload });
+      return response.data;
+    } else {
+      const response = await api.post<ChatResponse>('/chat', payload);
+      return response.data;
+    }
   } catch (error) {
     console.error('Error sending message:', error);
     throw error;

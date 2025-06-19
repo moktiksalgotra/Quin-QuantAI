@@ -574,8 +574,8 @@ Type 'help' to see more examples!"""
             
         return "I'm sorry, I don't have information on that topic yet. I can help you with questions about Python, data, data science, machine learning, artificial intelligence, and big data."
 
-    def generate_query(self, question: str, table_name: Optional[str] = None, table_schema: Optional[Dict[str, Any]] = None) -> SQLQuery:
-        """Generate SQL query from natural language question."""
+    def generate_query(self, question: str, table_name: Optional[str] = None, table_schema: Optional[Dict[str, Any]] = None, history: Optional[list] = None) -> SQLQuery:
+        """Generate SQL query from natural language question, using conversation history if provided."""
         try:
             # First check if it's a knowledge base question
             kb_key = self.is_knowledge_base_question(question)
@@ -606,21 +606,67 @@ Type 'help' to see more examples!"""
                     explanation=self.get_operation_response()
                 )
 
+            question_lower = question.lower().strip()
+            
+            # Keywords for summary and data view requests
+            summary_keywords = ['summary', 'summarize', 'explain', 'describe']
+            view_keywords = ['show', 'display', 'view']
+            data_keywords = ['data', 'dataset']
+
+            # Check for summary request (now triggers on any of these words)
+            is_summary_request = any(keyword in question_lower for keyword in summary_keywords)
+
+            # Check for data view request (and not a summary request)
+            is_data_view_request = (
+                any(keyword in question_lower for keyword in view_keywords) and
+                any(keyword in question_lower for keyword in data_keywords) and
+                not is_summary_request
+            )
+
+            if is_summary_request:
+                if not table_name:
+                    return SQLQuery(
+                        query="SELECT 'no_dataset' as type",
+                        explanation="I don't see any dataset available. Please upload a dataset first, and then I'll be happy to help you analyze it!",
+                        summary="No dataset available",
+                    )
+                return SQLQuery(
+                    query="SELECT 'dataset_summary' as type",
+                    explanation="Generating a summary of the dataset...",
+                    summary="Here is a summary of your dataset."
+                )
+
+            if is_data_view_request:
+                if not table_name:
+                    return SQLQuery(
+                        query="SELECT 'no_dataset' as type",
+                        explanation="I don't see any dataset available. Please upload a dataset first, and then I'll be happy to help you analyze it!",
+                        summary="No dataset available",
+                    )
+                return SQLQuery(
+                    query=f'SELECT * FROM "{table_name}" LIMIT 10',
+                    explanation="Here are the first 10 rows of your dataset. This gives you a quick overview of the data's structure and content.",
+                    summary="Showing the first 10 rows of the dataset."
+                )
+
             # If it's not a data analysis question, use LLM for general knowledge
             if not self.is_data_analysis_question(question):
                 try:
+                    # Build conversation history string
+                    history_str = ""
+                    if history:
+                        for turn in history[-5:]:
+                            if turn.get('user'):
+                                history_str += f"User: {turn['user']}\n"
+                            if turn.get('assistant'):
+                                history_str += f"Assistant: {turn['assistant']}\n"
                     prompt = ChatPromptTemplate.from_messages([
-                        ("system", """You are a helpful AI assistant with expertise in technology, programming, and data science.
-                        Provide clear, accurate, and concise answers to questions.
-                        If you're not sure about something, say so.
-                        Format your response with bullet points for better readability.
-                        Focus on providing factual information and avoid making assumptions."""),
-                        ("human", "{question}")
+                        ("system", """You are a helpful AI assistant with expertise in technology, programming, and data science.\nUse the conversation history to resolve pronouns and follow-up questions.\nProvide clear, accurate, and concise answers to questions.\nIf you're not sure about something, say so.\nFormat your response with bullet points for better readability.\nFocus on providing factual information and avoid making assumptions."""),
+                        ("human", f"""Conversation History:\n{history_str}\nCurrent Question: {{question}}""")
                     ])
                     prompt_msg = prompt.format_messages(question=question)
                     response = self.llm.invoke(prompt_msg)
                     answer = response.content.strip()
-                    
                     return SQLQuery(
                         query="SELECT 'general_knowledge' as response",
                         explanation=answer
@@ -629,7 +675,7 @@ Type 'help' to see more examples!"""
                     logger.error(f"Error generating general knowledge response: {str(e)}")
                     return SQLQuery(
                         query="SELECT 'error' as response",
-                        explanation="I apologize, but I'm having trouble processing your question. Could you please rephrase it or try asking about data analysis instead?"
+                        explanation="I apologize, but I'm having trouble processing your question. Could you please rephrase it or try asking about data analysis instead."
                     )
 
             # Check if table_name is provided for data analysis questions

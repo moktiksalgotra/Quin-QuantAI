@@ -158,6 +158,7 @@ function App() {
   const [dataset, setDataset] = useState<DatasetInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [hasMessages, setHasMessages] = useState(false);
   const [, setGreetingIndex] = useState(0);
   const [userInputted, setUserInputted] = useState(false);
@@ -201,9 +202,18 @@ function App() {
     }
   }, [userInputted]);
 
+  useEffect(() => {
+    if (uploadSuccess) {
+      const timer = setTimeout(() => {
+        setShowUpload(false);
+      }, 2000); // Hide after 2 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [uploadSuccess]);
+
   const handleDatasetUploaded = (newDataset: DatasetInfo) => {
     setDataset(newDataset);
-    setShowUpload(false);
+    setUploadSuccess(true);
   };
 
   const handleMessagesChange = (hasMessages: boolean) => {
@@ -358,7 +368,10 @@ function App() {
               <div className="flex items-center justify-between w-full mb-8">
                 <h3 className="text-2xl font-bold text-white">Upload Dataset</h3>
                 <button
-                  onClick={() => setShowUpload(false)}
+                  onClick={() => {
+                    setShowUpload(false);
+                    setUploadSuccess(false); // Reset on close
+                  }}
                   className="text-gray-400 hover:text-gray-200 transition-colors bg-transparent shadow-none focus:outline-none focus:ring-0 hover:bg-transparent"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,7 +380,11 @@ function App() {
                 </button>
               </div>
               <div className="w-full flex flex-col items-center">
-                <DatasetUpload onDatasetUploaded={handleDatasetUploaded} />
+                <DatasetUpload 
+                  onDatasetUploaded={handleDatasetUploaded} 
+                  uploadSuccess={uploadSuccess}
+                  setUploadSuccess={setUploadSuccess}
+                />
               </div>
               <div className="flex flex-row gap-4 mt-6 w-full justify-center">
                 {/* Action buttons are inside DatasetUpload */}

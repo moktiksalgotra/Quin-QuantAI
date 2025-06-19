@@ -176,8 +176,12 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
       if (typeof userMessage.content !== 'string') {
         throw new Error('Message content must be a string');
       }
-      const response = await sendMessage(userMessage.content);
-      
+      // Prepare history: last 5 user/assistant pairs
+      const history = messages.slice(-10).map(m => ({
+        user: m.role === 'user' ? m.content : undefined,
+        assistant: m.role === 'assistant' ? (m.summary || m.explanation || m.content) : undefined
+      })).filter(h => h.user || h.assistant);
+      const response = await sendMessage({ message: userMessage.content, history });
       // Store assistant message as structured data
       const assistantMessageId = (Date.now() + 1).toString();
       const assistantMessage: Message = {
@@ -192,7 +196,6 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
         type: response.type,
       };
       setMessages(prev => [...prev, assistantMessage]);
-
       // Execute the query if provided
       if (response.sql) {
         await onQueryExecute(response.sql);
@@ -263,6 +266,43 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
   };
 
   const renderAssistantMessage = (message: Message) => {
+    // Special rendering for dataset summary
+    if (message.type === 'dataset_summary') {
+      return (
+        <div className="space-y-4">
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-purple-200 mb-2 flex items-center gap-2">
+              <svg className="w-6 h-6 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h3m4 4v1a3 3 0 01-3 3H7a3 3 0 01-3-3V7a3 3 0 013-3h5" /></svg>
+              Dataset Summary
+            </h3>
+            {message.summary && (
+              <div className="text-purple-100 font-semibold mb-2">{message.summary}</div>
+            )}
+            {message.explanation && (
+              <div className="text-gray-100 whitespace-pre-line text-base leading-relaxed">
+                {processMessageContent(message.explanation)}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    // Special rendering for no dataset
+    if (message.type === 'no_dataset') {
+      return (
+        <div className="space-y-4">
+          <div className="bg-white/10 backdrop-blur-md border border-red-400/30 rounded-2xl p-6 shadow-xl flex items-start gap-4">
+            <svg className="w-8 h-8 text-red-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
+            <div>
+              <h3 className="text-lg font-bold text-red-200 mb-2">No Dataset Available</h3>
+              <div className="text-red-100 text-base leading-relaxed">
+                {message.explanation || 'Please upload a dataset first, and then I\'ll be happy to help you analyze it!'}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
     // Use summary for main chat, fallback to explanation if summary is missing
     const mainText = message.summary || message.explanation;
     // Only show explanation for non-data-analysis types

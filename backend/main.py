@@ -21,6 +21,7 @@ if backend_dir not in sys.path:
 from db.models import get_engine, init_db, Base
 from db.dynamic_models import DynamicTableManager
 from llm.query_generator import QueryGenerator
+from processors.data_processor import DataProcessor
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -46,11 +47,13 @@ app.add_middleware(
 engine = init_db(os.getenv("DATABASE_URL", "sqlite:///./data.db"))
 table_manager = DynamicTableManager(os.getenv("DATABASE_URL", "sqlite:///./data.db"))
 query_generator = QueryGenerator()
+data_processor = DataProcessor()
 
 logger = logging.getLogger(__name__)
 
 class ChatMessage(BaseModel):
     message: str
+    history: Optional[List[Dict[str, str]]] = None
 
 class ChatResponse(BaseModel):
     query: str
@@ -194,11 +197,12 @@ async def chat(message: ChatMessage):
         table_schema = table_manager.get_table_schema("current_dataset")
         logger.info(f"Table schema passed to LLM: {json.dumps(table_schema, indent=2)}")
         
-        # Generate SQL query from natural language
+        # Generate SQL query from natural language, passing history
         sql_query = query_generator.generate_query(
             message.message,
             table_name="current_dataset",
-            table_schema=table_schema
+            table_schema=table_schema,
+            history=message.history
         )
         logger.info(f"LLM raw response: {sql_query}")
         logger.info(f"Generated SQL Query: {sql_query.query}")
@@ -210,15 +214,34 @@ async def chat(message: ChatMessage):
             ("SELECT 'out_of_scope'", "out_of_scope"),
             ("SELECT 'knowledge_base'", "knowledge_base"),
             ("SELECT 'general_knowledge'", "general_knowledge"),
-            ("SELECT 'operation'", "operation")
+            ("SELECT 'operation'", "operation"),
+            ("SELECT 'dataset_summary'", "dataset_summary")
         ]
         for prefix, resp_type in special_types:
             if sql_query.query.startswith(prefix):
+                if resp_type == "dataset_summary":
+                    # Load the entire dataset
+                    with Session(engine) as session:
+                        result = session.execute(text('SELECT * FROM "current_dataset"'))
+                        data = list(result.mappings())
+                    df = pd.DataFrame(data)
+                    
+                    # Generate insights
+                    insights = data_processor.generate_insights(df)
+                    
+                    return ChatResponse(
+                        query=sql_query.query,
+                        explanation=insights,
+                        summary="Here is a summary of the dataset:",
+                        data=[],
+                        type="dataset_summary"
+                    )
+                
                 return ChatResponse(
                     query=sql_query.query,
                     explanation=sql_query.explanation,
                     summary=sql_query.summary,
-                    data=[],  # No data for special responses
+                    data=[],
                     type=resp_type
                 )
         # Additional check: If query is empty or not a SELECT, treat as special response
@@ -233,12 +256,24 @@ async def chat(message: ChatMessage):
         
         # Execute query for regular data analysis questions
         with Session(engine) as session:
-            result = session.execute(text(sql_query.query))
-            data = list(result.mappings())
-            logger.info(f"Query returned {len(data)} rows")
-            if data:
-                logger.info(f"First row sample: {data[0]}")
-                
+            try:
+                result = session.execute(text(sql_query.query))
+                data = list(result.mappings())
+            except Exception as e:
+                if "no such column: summary" in str(e):
+                    # Fallback to dataset summary
+                    df = pd.DataFrame(table_manager.get_table_data("current_dataset"))
+                    insights = data_processor.generate_insights(df)
+                    return ChatResponse(
+                        query=sql_query.query,
+                        explanation=insights,
+                        summary="Here is a summary of the dataset:",
+                        data=[],
+                        type="dataset_summary"
+                    )
+                else:
+                    raise
+        
         # Convert to pandas for easier data manipulation
         df = pd.DataFrame(data)
         logger.info(f"DataFrame columns: {df.columns.tolist()}")
