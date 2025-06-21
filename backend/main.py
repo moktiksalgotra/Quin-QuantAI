@@ -90,7 +90,7 @@ async def startup_event():
 async def root():
     return {
         "status": "healthy",
-        "message": "SEE-Q-QuantAI API is running",
+        "message": "Quant - Query API is running",
         "version": "1.0.0"
     }
 
@@ -177,7 +177,7 @@ async def chat(message: ChatMessage):
         if message.message.lower() in ['hi', 'hello', 'hey', 'greetings']:
             return ChatResponse(
                 query="SELECT 'greeting' as type",
-                explanation="Hello! I'm SEE-Q - Intelligent Analytics Assistant. I can help you analyze your data.",
+                explanation="Hello! I'm Quant - Query - Intelligent Analytics Assistant. I can help you analyze your data.",
                 summary="Greeting message",
                 data=[],
                 type="greeting"

@@ -114,7 +114,7 @@ function GreetingBar({ visible,}: { visible: boolean; onClose: () => void }) {
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
         <div className="flex items-center w-full justify-center relative z-10">
           <div className="text-white">
-            <p className="font-medium text-center italic">Kia Ora! I'm <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-bold">SEE-Q</span>, an Intelligent Analytics Assistant that converts your natural language questions into SQL queries.</p>
+            <p className="font-medium text-center italic">Kia Ora! I'm <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-bold">Quant - Query</span>, an Intelligent Analytics Assistant that converts your natural language questions into SQL queries.</p>
           </div>
         </div>
       </div>
