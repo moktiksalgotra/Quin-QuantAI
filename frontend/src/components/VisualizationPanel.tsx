@@ -6,6 +6,8 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   RadialBarChart, RadialBar,
 } from 'recharts';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface DataPoint {
   [key: string]: string | number | boolean;
@@ -258,19 +260,41 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ data, onClose }
     }
   };
 
+  const handleSaveAsPDF = async () => {
+    const chartElement = document.getElementById('chart-container');
+    if (!chartElement) return;
+    const canvas = await html2canvas(chartElement, { backgroundColor: '#22223b' });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'px',
+      format: [canvas.width, canvas.height],
+    });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save('chart.pdf');
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-md">
       <div className="bg-gray-900 bg-opacity-70 backdrop-blur-md rounded-lg p-6 w-11/12 max-w-4xl max-h-[90vh] overflow-auto shadow-2xl animate-upload-modal">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-200">Data Visualization</h3>
-          <button
-            onClick={onClose}
-            className="bg-transparent text-gray-400 hover:bg-transparent rounded-lg p-2 transition-colors focus:outline-none focus:ring-0"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSaveAsPDF}
+              className="px-4 py-2 text-sm font-medium text-white bg-white/10 backdrop-blur-md rounded-xl shadow hover:bg-white/20 focus:outline-none focus:ring-0 border-none transition-colors mr-2"
+            >
+              Save as PDF
+            </button>
+            <button
+              onClick={onClose}
+              className="bg-transparent text-gray-400 hover:bg-transparent rounded-lg p-2 transition-colors focus:outline-none focus:ring-0"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-2 mb-4">
@@ -291,7 +315,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ data, onClose }
 
         {renderAxisSelectors()}
 
-        <div className="bg-Transparent rounded-lg p-4">
+        <div className="bg-Transparent rounded-lg p-4" id="chart-container">
           {renderChart()}
         </div>
       </div>

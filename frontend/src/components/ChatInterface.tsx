@@ -69,6 +69,8 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [, setIsInputFocused] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -82,6 +84,52 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
     }
     onMessagesChange(messages.length > 0);
   }, [messages, onMessagesChange]);
+
+  // Setup SpeechRecognition
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
+    recognitionRef.current = recognition;
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        interimTranscript += event.results[i][0].transcript;
+      }
+      setInput(interimTranscript);
+      // If the result is final, stop listening
+      if (event.results[event.results.length - 1].isFinal) {
+        setIsListening(false);
+      }
+    };
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+    // Cleanup
+    return () => {
+      recognition.abort();
+    };
+  }, []);
+
+  const handleMicClick = () => {
+    if (isListening) {
+      recognitionRef.current && recognitionRef.current.abort();
+      setIsListening(false);
+      return;
+    }
+    if (recognitionRef.current) {
+      setIsListening(true);
+      recognitionRef.current.start();
+    }
+  };
 
   const renderDataTable = (data: any[]) => {
     if (!data.length) return <p className="text-gray-600">No data found.</p>;
@@ -513,6 +561,35 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
             className={`flex-1 bg-transparent border-none focus:border-transparent outline-none focus:ring-0 focus:outline-none ${messages.length === 0 ? 'text-lg' : 'text-lg'} text-white placeholder-gray-400 px-2 relative z-10`}
             disabled={isLoading}
           />
+          {/* Microphone Button for Voice Input */}
+          <button
+            type="button"
+            onClick={handleMicClick}
+            className={`ml-2 rounded-full p-2.5 transition-all duration-200 focus:outline-none focus:ring-0 shadow-none border-none ${
+              isListening 
+                ? 'bg-red-500 text-white shadow-lg scale-105' 
+                : 'bg-white/10 text-white hover:bg-white/20 hover:scale-105 active:scale-95'
+            } relative z-10`}
+            aria-label={isListening ? 'Stop Listening' : 'Start Voice Input'}
+            title={isListening ? 'Stop Listening' : 'Start Voice Input'}
+            disabled={isLoading}
+          >
+            {isListening ? (
+              // Google-style filled mic icon (listening)
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+              </svg>
+            ) : (
+              // Google-style outlined mic icon (idle)
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            )}
+          </button>
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
