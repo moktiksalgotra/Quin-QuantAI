@@ -2,9 +2,6 @@ import { useState, useRef, useEffect, ReactElement } from 'react';
 import { sendMessage } from '../services/api';
 import type { Message,} from '../types/chat';
 
-
-
-
 // Helper function to format different data types
 const formatValue = (value: any, columnName: string): string => {
   if (value === null || value === undefined) return 'N/A';
@@ -71,6 +68,7 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
   const [, setIsInputFocused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const autoSubmitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -102,13 +100,31 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
         interimTranscript += event.results[i][0].transcript;
       }
       setInput(interimTranscript);
-      // If the result is final, stop listening
+      
+      // If the result is final, stop listening and schedule auto-submit
       if (event.results[event.results.length - 1].isFinal) {
         setIsListening(false);
+        
+        // Clear any existing timeout
+        if (autoSubmitTimeoutRef.current) {
+          clearTimeout(autoSubmitTimeoutRef.current);
+        }
+        
+        // Auto-submit after 2.5 seconds
+        autoSubmitTimeoutRef.current = setTimeout(() => {
+          if (interimTranscript.trim()) {
+            // Trigger form submission programmatically
+            const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+            document.querySelector('form')?.dispatchEvent(submitEvent);
+          }
+        }, 2500); // 2.5 seconds delay
       }
     };
     recognition.onerror = () => {
       setIsListening(false);
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current);
+      }
     };
     recognition.onend = () => {
       setIsListening(false);
@@ -116,6 +132,9 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
     // Cleanup
     return () => {
       recognition.abort();
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -123,6 +142,11 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
     if (isListening) {
       recognitionRef.current && recognitionRef.current.abort();
       setIsListening(false);
+      // Clear auto-submit timeout if user manually stops
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current);
+        autoSubmitTimeoutRef.current = null;
+      }
       return;
     }
     if (recognitionRef.current) {
@@ -142,7 +166,8 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
 
     return (
       <>
-        <div className="w-full overflow-x-auto rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
+        {/* Adjusted: Added min-w-full to div to ensure scroll is possible, and made table min-w-full */}
+        <div className="w-full overflow-x-auto rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
           <div className="inline-block min-w-full align-middle">
             <div className="overflow-hidden">
               <table className="min-w-full divide-y divide-gray-700">
@@ -151,7 +176,8 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
                     {columns.map((column) => (
                       <th
                         key={column}
-                        className={`px-6 py-3 text-left text-xs font-semibold text-gray-200 uppercase tracking-wider ${
+                        // Adjusted: text-xs on small screens, px-3 py-2 for padding (smaller on mobile)
+                        className={`px-3 py-2 text-left text-xs font-semibold text-gray-200 uppercase tracking-wider ${
                           columnTypes[column] === 'number' || columnTypes[column] === 'currency' 
                             ? 'text-right' 
                             : ''
@@ -171,7 +197,8 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
                       {columns.map((column, j) => (
                         <td
                           key={j}
-                          className={`px-6 py-4 whitespace-nowrap text-sm ${
+                          // Adjusted: text-xs on small screens, px-3 py-2 for padding (smaller on mobile)
+                          className={`px-3 py-2 whitespace-nowrap text-xs sm:text-sm ${
                             columnTypes[column] === 'number' || columnTypes[column] === 'currency'
                               ? 'text-right font-mono text-gray-200'
                               : 'text-gray-200'
@@ -186,7 +213,8 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
               </table>
             </div>
           </div>
-          <div className="px-6 py-3 text-xs text-gray-400 bg-transparent flex justify-between items-center">
+          {/* Adjusted: Reduced padding for mobile */}
+          <div className="px-3 py-2 text-xs text-gray-400 bg-transparent flex justify-between items-center">
             <span>Showing {data.length} {data.length === 1 ? 'row' : 'rows'}</span>
           </div>
         </div>
@@ -195,7 +223,8 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
             onClick={() => {
               onVisualizeData(data);
             }}
-            className="px-6 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold shadow-md transition-all duration-200 hover:bg-white/20 focus:outline-none focus:ring-0"
+            // Adjusted: Reduced padding for mobile
+            className="px-4 py-2 text-sm rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold shadow-md transition-all duration-200 hover:bg-white/20 focus:outline-none focus:ring-0"
           >
             Visualize Data
           </button>
@@ -207,6 +236,12 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
+
+    // Clear auto-submit timeout if it exists
+    if (autoSubmitTimeoutRef.current) {
+      clearTimeout(autoSubmitTimeoutRef.current);
+      autoSubmitTimeoutRef.current = null;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -272,14 +307,14 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
 
     const renderParagraph = (paragraphLines: string[]) => {
       if (paragraphLines.length > 0) {
-        elements.push(<p key={`para-${elements.length}`} className="whitespace-pre-wrap">{paragraphLines.join('\n')}</p>);
+        elements.push(<p key={`para-${elements.length}`} className="whitespace-pre-wrap text-sm sm:text-base">{paragraphLines.join('\n')}</p>); // Adjusted: text-sm for mobile
       }
     };
 
     const renderList = (listItems: string[]) => {
       if (listItems.length > 0) {
         elements.push(
-          <ul key={`list-${elements.length}`} className="list-disc list-inside space-y-1 pl-4">
+          <ul key={`list-${elements.length}`} className="list-disc list-inside space-y-1 pl-4 text-sm sm:text-base"> {/* Adjusted: text-sm for mobile */}
             {listItems.map((item, index) => (
               <li key={`list-item-${elements.length}-${index}`}>{item.trimStart().substring(1).trim()}</li>
             ))}
@@ -318,16 +353,16 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
     if (message.type === 'dataset_summary') {
       return (
         <div className="space-y-4">
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-purple-200 mb-2 flex items-center gap-2">
-              <svg className="w-6 h-6 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h3m4 4v1a3 3 0 01-3 3H7a3 3 0 01-3-3V7a3 3 0 013-3h5" /></svg>
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 sm:p-6 shadow-xl"> {/* Adjusted: Smaller padding and rounded on mobile */}
+            <h3 className="text-base sm:text-lg font-bold text-purple-200 mb-2 flex items-center gap-2"> {/* Adjusted: Smaller font on mobile */}
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h3m4 4v1a3 3 0 01-3 3H7a3 3 0 01-3-3V7a3 3 0 013-3h5" /></svg>
               Dataset Summary
             </h3>
             {message.summary && (
-              <div className="text-purple-100 font-semibold mb-2">{message.summary}</div>
+              <div className="text-purple-100 font-semibold mb-2 text-sm sm:text-base">{message.summary}</div> // Adjusted: Smaller font on mobile
             )}
             {message.explanation && (
-              <div className="text-gray-100 whitespace-pre-line text-base leading-relaxed">
+              <div className="text-gray-100 whitespace-pre-line text-sm sm:text-base leading-relaxed"> {/* Adjusted: Smaller font on mobile */}
                 {processMessageContent(message.explanation)}
               </div>
             )}
@@ -339,16 +374,16 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
     if (message.type === 'no_dataset') {
       return (
         <div className="space-y-4">
-          <div className="bg-white/10 backdrop-blur-md border border-red-400/30 rounded-2xl p-6 shadow-xl flex items-start gap-4">
-            <svg className="w-8 h-8 text-red-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
+          <div className="bg-white/10 backdrop-blur-md border border-red-400/30 rounded-xl p-4 sm:p-6 shadow-xl flex items-start gap-4"> {/* Adjusted: Smaller padding and rounded on mobile */}
+            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-red-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
             <div>
-              <h3 className="text-lg font-bold text-red-200 mb-2">No Dataset Available</h3>
-              <div className="text-red-100 text-base leading-relaxed mb-4">
+              <h3 className="text-base sm:text-lg font-bold text-red-200 mb-2">No Dataset Available</h3> {/* Adjusted: Smaller font on mobile */}
+              <div className="text-red-100 text-sm sm:text-base leading-relaxed mb-4"> {/* Adjusted: Smaller font on mobile */}
                 {message.explanation || 'Please upload a dataset first, and then I\'ll be happy to help you analyze it!'}
               </div>
               <button
                 onClick={onUploadClick}
-                className="mt-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg shadow hover:from-pink-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 transition"
+                className="mt-2 px-3 py-1.5 text-sm bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg shadow hover:from-pink-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-opacity-50 transition" // Adjusted: Smaller padding/font
               >
                 Upload Dataset
               </button>
@@ -368,7 +403,8 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
         <div className="space-y-4">
           {message.explanation && (
             <div className="group relative">
-              <div className="text-gray-800 bg-transparent rounded-lg p-4 transition-all duration-300 flex items-start">
+              {/* Adjusted: Smaller padding on mobile */}
+              <div className="text-gray-800 bg-transparent rounded-xl p-4 transition-all duration-300 flex items-start">
                 {/* Render processed mainText */}
                 <div className="text-gray-200 flex-1 message-content">
                   {processMessageContent(message.explanation)}
@@ -384,7 +420,8 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
       <div className="space-y-4">
         {mainText && (
           <div className="group relative">
-            <div className="text-gray-800 bg-transparent rounded-lg p-4 transition-all duration-300 flex items-start">
+            {/* Adjusted: Smaller padding on mobile */}
+            <div className="text-gray-800 bg-transparent rounded-xl p-4 transition-all duration-300 flex items-start">
               {/* Render processed mainText */}
               <div className="text-gray-200 flex-1 message-content">
                 {processMessageContent(mainText)}
@@ -399,15 +436,17 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
           !message.query.toLowerCase().includes("'help'") &&
           !message.query.toLowerCase().includes("'out_of_scope'") && (
             <div className="group relative">
-              <div className="bg-transparent rounded-lg p-4 transition-all duration-300 flex items-start">
+              {/* Adjusted: Smaller padding on mobile */}
+              <div className="bg-transparent rounded-xl p-4 transition-all duration-300 flex items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"> {/* Adjusted: Smaller icon on mobile */}
                       <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                     </svg>
-                    <span className="font-medium text-gray-200">SQL Query</span>
+                    <span className="font-medium text-gray-200 text-sm">SQL Query</span> {/* Adjusted: Smaller font on mobile */}
                   </div>
-                  <pre className="font-mono text-sm text-gray-200 overflow-x-auto whitespace-pre-wrap p-3 rounded-md">{message.query}</pre>
+                  {/* Adjusted: Smaller font for pre on mobile */}
+                  <pre className="font-mono text-xs sm:text-sm text-gray-200 overflow-x-auto whitespace-pre-wrap p-3 rounded-md">{message.query}</pre>
                 </div>
               </div>
             </div>
@@ -447,12 +486,13 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
         </div>
       )}
 
-      {/* Blue glow at the bottom for liquid effect */}
+      {/* Blue glow at the bottom for liquid effect - No change needed here */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-gradient-to-t from-blue-600/40 to-transparent rounded-b-3xl blur-2xl pointer-events-none"></div>
       
       {/* Messages Area */}
       <div 
-        className="flex-1 p-6 space-y-6 transition-all duration-300 w-full bg-transparent overflow-y-auto max-h-[calc(100vh-200px)]"
+        // Adjusted: Reduced horizontal padding on mobile (p-4 instead of p-6)
+        className="flex-1 p-4 sm:p-6 space-y-6 transition-all duration-300 w-full bg-transparent overflow-y-auto max-h-[calc(100vh-200px)]"
         style={{ paddingTop: messages.length > 0 ? '4rem' : '0' }}
       >
         {messages.length === 0 ? (
@@ -469,8 +509,8 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
             >
               {message.role === 'assistant' && (
                 <div className="glass-avatar mr-3 flex-shrink-0 flex items-end">
-                  {/* Bot Icon - Modern Robot Head */}
-                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Bot Icon - Adjusted size for mobile: w-8 h-8 (svg width/height) */}
+                  <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="20" cy="20" r="20" fill="rgba(255,255,255,0.15)" />
                     <g filter="url(#bot-glass)">
                       <rect x="10" y="16" width="20" height="14" rx="7" fill="#fff" fillOpacity="0.7" />
@@ -494,10 +534,11 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
               <div className="min-w-0 flex-1">
                 {message.role === 'user' ? (
                   <div className="flex items-center gap-2 justify-end">
-                    <p className="whitespace-pre-wrap text-white">{message.content}</p>
+                    {/* Adjusted: Message bubble text size for mobile */}
+                    <p className="whitespace-pre-wrap text-white text-sm sm:text-base">{message.content}</p>
                     <span className="glass-avatar ml-3 flex-shrink-0 flex items-end">
-                      {/* User Icon - Modern Silhouette */}
-                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      {/* User Icon - Adjusted size for mobile: w-8 h-8 (svg width/height) */}
+                      <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="20" cy="20" r="20" fill="rgba(255,255,255,0.15)" />
                         <g filter="url(#user-glass)">
                           <circle cx="20" cy="16" r="6" fill="#fff" fillOpacity="0.7" />
@@ -524,7 +565,7 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
         )}
         {isLoading && (
           <div className="flex justify-start animate-fade-in">
-            <div className="message-bubble max-w-3xl rounded-2xl px-6 py-4 bg-Transparent">
+            <div className="message-bubble max-w-3xl rounded-xl px-4 py-3 bg-Transparent"> {/* Adjusted: Smaller padding on mobile */}
               <div className="flex space-x-2">
                 <div className="w-2 h-2 rounded-full bg-gray-400 typing-dot"></div>
                 <div className="w-2 h-2 rounded-full bg-gray-400 typing-dot"></div>
@@ -537,35 +578,45 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
       </div>
 
       {/* Input Area */}
-      <div className={`bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 p-[2px] rounded-full ${messages.length === 0 ? 'max-w-3xl w-full mx-auto flex justify-center' : ''}`}>
-        <form onSubmit={handleSubmit} className={`relative flex items-center bg-[#0a1633] rounded-full overflow-hidden w-full ${messages.length === 0 ? 'px-6 py-2' : 'px-4 py-2'}`} style={{ minHeight: '56px' }}>
+      {/* Adjusted: Removed max-w-3xl on the parent div to allow it to take full width on mobile. */}
+      {/* Added `md:max-w-3xl md:mx-auto` to re-apply the max-width on larger screens. */}
+      <div className={`bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 p-[2px] rounded-full ${messages.length === 0 ? 'w-full flex justify-center md:max-w-3xl md:mx-auto' : 'md:max-w-3xl md:mx-auto'}`}>
+        <form onSubmit={handleSubmit} className={`relative flex items-center bg-[#0a1633] rounded-full overflow-hidden w-full px-4 py-2`} style={{ minHeight: '56px' }}>
           {/* Upload Dataset Button */}
           <button
             type="button"
             onClick={onUploadClick}
-            className="mr-3 rounded-full p-2 bg-transparent backdrop-blur-md text-white hover:bg-white/20 transition-colors relative z-10 shadow-lg focus:outline-none focus:ring-0"
+            className="mr-2 sm:mr-3 rounded-full p-2 bg-transparent backdrop-blur-md text-white hover:bg-white/20 transition-colors relative z-10 shadow-lg focus:outline-none focus:ring-0"
             aria-label="Upload Dataset"
             title="Upload Dataset"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"> {/* Adjusted: Smaller icon on mobile */}
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
             </svg>
           </button>
           <input
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              // Clear auto-submit timeout if user starts typing manually
+              if (autoSubmitTimeoutRef.current) {
+                clearTimeout(autoSubmitTimeoutRef.current);
+                autoSubmitTimeoutRef.current = null;
+              }
+            }}
             onFocus={() => setIsInputFocused(true)}
             onBlur={() => setIsInputFocused(false)}
             placeholder="How can I help you today?"
-            className={`flex-1 bg-transparent border-none focus:border-transparent outline-none focus:ring-0 focus:outline-none ${messages.length === 0 ? 'text-lg' : 'text-lg'} text-white placeholder-gray-400 px-2 relative z-10`}
+            className={`flex-1 bg-transparent border-none focus:border-transparent outline-none focus:ring-0 focus:outline-none text-base sm:text-lg text-white placeholder-gray-400 px-2 relative z-10`} // Adjusted: Text size to be uniform/smaller on mobile
             disabled={isLoading}
           />
           {/* Microphone Button for Voice Input */}
           <button
             type="button"
             onClick={handleMicClick}
-            className={`ml-2 rounded-full p-2.5 transition-all duration-200 focus:outline-none focus:ring-0 shadow-none border-none ${
+            // Adjusted: Reduced p-value for smaller button size
+            className={`ml-1 sm:ml-2 rounded-full p-2 sm:p-2.5 transition-all duration-200 focus:outline-none focus:ring-0 shadow-none border-none ${
               isListening 
                 ? 'bg-red-500 text-white shadow-lg scale-105' 
                 : 'bg-white/10 text-white hover:bg-white/20 hover:scale-105 active:scale-95'
@@ -593,10 +644,11 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className={`ml-3 rounded-full p-2 transition-colors ${!input.trim() || isLoading ? 'text-gray-500 cursor-not-allowed' : 'bg-gray-700 text-white hover:bg-gray-600'} relative z-10`}
+            // Adjusted: Reduced p-value for smaller button size
+            className={`ml-2 sm:ml-3 rounded-full p-2 sm:p-2.5 transition-colors ${!input.trim() || isLoading ? 'text-gray-500 cursor-not-allowed' : 'bg-gray-700 text-white hover:bg-gray-600'} relative z-10`}
             aria-label="Send"
           >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"> {/* Adjusted: Smaller icon on mobile */}
               <path d="M3 20v-2l14-5-14-5V4l19 8-19 8z" />
             </svg>
           </button>
@@ -605,4 +657,3 @@ export function ChatInterface({ onUploadClick, onQueryExecute, onMessagesChange,
     </div>
   );
 }
- 

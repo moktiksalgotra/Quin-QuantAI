@@ -80,7 +80,8 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
   return (
     <div className="space-y-6">
       <div
-        className={`relative border-2 border-dashed rounded-xl p-8 transition-colors bg-purple-900/20 backdrop-blur-md border-transparent shadow-xl ${dragActive ? 'ring-2 ring-blue-400' : ''}`}
+        // Adjusted: Reduced padding from p-8 to p-6 for a smaller mobile footprint
+        className={`relative border-2 border-dashed rounded-xl p-6 sm:p-8 transition-colors bg-purple-900/20 backdrop-blur-md border-transparent shadow-xl ${dragActive ? 'ring-2 ring-blue-400' : ''}`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
@@ -95,12 +96,15 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
           disabled={isUploading}
         />
         <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-white/20 flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {/* Adjusted: Reduced size from w-12 h-12 to w-10 h-10, and inner SVG from w-6 h-6 to w-5 h-5 */}
+          <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 rounded-full bg-white/20 flex items-center justify-center">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-1">Upload your dataset</h3>
+          {/* Adjusted: Font size slightly smaller for mobile */}
+          <h3 className="text-base sm:text-lg font-medium text-white mb-1">Upload your dataset</h3>
+          {/* Adjusted: Font size already small, kept it as text-sm */}
           <p className="text-sm text-gray-200 mb-4">
             Drag and drop your CSV file here, or click to browse
           </p>
@@ -119,6 +123,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
         <div className="rounded-lg bg-red-50 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
+              {/* Adjusted: Icon size is fine */}
               <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
@@ -134,6 +139,7 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
         <div className="rounded-lg bg-green-500/10 p-4 backdrop-blur-md">
           <div className="flex">
             <div className="flex-shrink-0">
+              {/* Adjusted: Icon size is fine */}
               <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
@@ -156,7 +162,8 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
               inputRef.current.value = '';
             }
           }}
-          className="px-4 py-2 text-sm font-medium text-white bg-white/10 backdrop-blur-md rounded-xl shadow hover:bg-white/20 focus:outline-none focus:ring-0 border-none"
+          // Adjusted: Reduced vertical padding from py-2 to py-1.5 for a smaller button
+          className="px-4 py-1.5 sm:py-2 text-sm font-medium text-white bg-white/10 backdrop-blur-md rounded-xl shadow hover:bg-white/20 focus:outline-none focus:ring-0 border-none"
         >
           Clear
         </button>
@@ -164,7 +171,8 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
           type="submit"
           onClick={handleSubmit}
           disabled={!file || isUploading}
-          className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-xl shadow backdrop-blur-md focus:outline-none focus:ring-0 border-none transition-colors ${
+          // Adjusted: Reduced vertical padding from py-2 to py-1.5 for a smaller button
+          className={`inline-flex items-center px-4 py-1.5 sm:py-2 text-sm font-medium text-white rounded-xl shadow backdrop-blur-md focus:outline-none focus:ring-0 border-none transition-colors ${
             !file || isUploading
               ? 'bg-white/20 cursor-not-allowed'
               : 'bg-white/10'
@@ -172,7 +180,8 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
         >
           {isUploading ? (
             <>
-              <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              {/* Adjusted: Reduced spinner size from w-4 h-4 to w-3 h-3 */}
+              <div className="w-3 h-3 sm:w-4 sm:h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               Uploading...
             </>
           ) : (
@@ -182,4 +191,4 @@ export const DatasetUpload: React.FC<DatasetUploadProps> = ({
       </div>
     </div>
   );
-}; 
+};
